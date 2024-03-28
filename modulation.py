@@ -33,6 +33,23 @@ class SignalProcessor():
                     0.5 * self.amplitude * np.sin(2 * np.pi * self.carrier_frequency * self.time[time_start:time_end])
         return signal
     
+    def generate_psk_signal(self,phase0,phase1):
+        # Пустой массив для сигнала
+        signal = np.zeros(len(self.time))
+ 
+        for i, bit in enumerate(self.bits):
+            time_start = i * int(self.time_per_bit * self.sampling_rate)
+            time_end = (i + 1) * int(self.time_per_bit * self.sampling_rate)
+            if bit == 1:
+                # Добавление синусоиды для бита "1"
+                signal[time_start:time_end] = \
+                    self.amplitude * np.sin(2 * np.pi * self.carrier_frequency * self.time[time_start:time_end] + phase1 * np.pi)
+            else:
+                # Установка значения сигнала равным половине амплитуды для бита "0"
+                signal[time_start:time_end] = \
+                    self.amplitude * np.sin(2 * np.pi * self.carrier_frequency * self.time[time_start:time_end] + phase0 * np.pi)
+        return signal
+    
     def generate_fm_signal(self,freq0,freq1):
         signal = np.zeros(len(self.time))
         for i, bit in enumerate(self.bits):
@@ -41,11 +58,11 @@ class SignalProcessor():
             if bit == 1:
                 # Добавление синусоиды для бита "1"
                 signal[time_start:time_end] = \
-                    self.amplitude * np.cos(2 * np.pi * freq0 * self.time[time_start:time_end])
+                    self.amplitude * np.cos(2 * np.pi * freq1 * self.time[time_start:time_end])
             else:
                 # Установка значения сигнала равным половине амплитуды для бита "0"
                 signal[time_start:time_end] = \
-                    self.amplitude * np.cos(2 * np.pi * freq1 * self.time[time_start:time_end])
+                    self.amplitude * np.cos(2 * np.pi * freq0 * self.time[time_start:time_end])
         return signal
 
 # Функция для сохранения сигнала в файл WAV
@@ -118,9 +135,10 @@ def generate_and_save():
 
         processor = SignalProcessor(bits,500,2000,8000)
         signal = processor.generate_am_signal()
-        #
-# Значения несущей в Гц в звуковой полосе частот 
+
         signal_fm = processor.generate_fm_signal(800,1600)
+        signal_psk = processor.generate_psk_signal(0,1)
+
         time = np.arange(0, len(signal)) * 1000 / processor.sampling_rate
         time_interp = np.linspace(0, time[-1], 10 * len(time))  # Временная ось для интерполированного сигнала
         # Интерполяция сигнала
@@ -130,11 +148,15 @@ def generate_and_save():
         interpolator_fm = interp1d(time,signal_fm,'cubic',bounds_error=False)
         interpolated_fm_signal = interpolator_fm(time_interp)
 
+        interpolator_psk = interp1d(time,signal_psk,'cubic',bounds_error=False)
+        interpolated_psk_signal = interpolator_psk(time_interp)
+
         #save_wav('output.wav', signal, sampling_rate)
 
         #messagebox.showinfo("Успех", "Файл успешно сохранен как output.wav")
         processor.plot_waveform(signal, time, interpolated_am_signal,time_interp)
         processor.plot_waveform(signal_fm, time, interpolated_fm_signal,time_interp)
+        processor.plot_waveform(signal_psk, time, interpolated_psk_signal,time_interp)
 
     except ValueError as e:
         messagebox.showerror("Ошибка", str(e))
