@@ -61,32 +61,45 @@ class SignalProcessor():
 
     # Функция для построения визуализации сигнала
     def plot_waveform(self,signal,time,interpolated_signal,time_interp):
-        # fig, ax = plt.subplots(2, 1, num=0, clear=True, sharex=True)
-        # ax[0].set_title('Signal')
-        # ax[0].plot(t, sig)
-        # ax[1].set_title('Modulated Signal')
-        # ax[1].plot(t, sig_mod)
-        # ax[1].set_xlabel('Time')
 
-        plt.figure(figsize=(10, 6))
-        plt.subplot(2, 1, 1)
-        plt.plot(time, signal, 'b.', label='Дискретные отсчеты')
-        plt.title('Сигнал')
-        plt.xlabel('Время (мс)')
-        plt.ylabel('Амплитуда')
-        plt.grid(True)
-        plt.legend()
 
-        plt.subplot(2, 1, 2)
+        fig,ax = plt.subplots(2,1,num=0,clear=True,sharex=True,sharey=True)
+        ax[0].set_xlabel('Время (мс)')
+        ax[0].set_ylabel('Амплитуда')
 
-        plt.plot(time_interp, interpolated_signal, 'r-', label='Интерполированный сигнал')
-        plt.title('Интерполированный сигнал')
-        plt.xlabel('Время (мс)')
-        plt.ylabel('Амплитуда')
-        plt.grid(True)
-        plt.legend()
+        ax[1].set_xlabel('Время (мс)')
+        ax[1].set_ylabel('Амплитуда')
 
-        plt.tight_layout()
+        ax[0].grid(True)
+        ax[0].plot(time,signal,'b.', label='Дискретные отсчеты')
+
+
+        ax[1].grid(True)
+        ax[1].plot(time_interp,interpolated_signal,'r-', label='Интерполированный сигнал')
+
+        fig.legend()
+
+        # plt.figure(figsize=(10, 6))
+
+        # plt.subplot(2, 1, 1)
+
+        # plt.plot(time, signal, 'b.', label='Дискретные отсчеты')
+        # plt.title('Сигнал')
+        # plt.xlabel('Время (мс)')
+        # plt.ylabel('Амплитуда')
+        # plt.grid(True)
+        # plt.legend()
+
+        # plt.subplot(2, 1, 2)
+
+        # plt.plot(time_interp, interpolated_signal, 'r-', label='Интерполированный сигнал')
+        # plt.title('Интерполированный сигнал')
+        # plt.xlabel('Время (мс)')
+        # plt.ylabel('Амплитуда')
+        # plt.grid(True)
+        # plt.legend()
+
+        # plt.tight_layout()
         plt.show()
 
 
@@ -103,7 +116,7 @@ def generate_and_save():
         # Преобразуем строку с битами в список целых чисел
         bits = [int(bit) for bit in bits_str]
 
-        processor = SignalProcessor(bits,500,2000,120_000)
+        processor = SignalProcessor(bits,500,2000,8000)
         signal = processor.generate_am_signal()
         #
 # Значения несущей в Гц в звуковой полосе частот 
