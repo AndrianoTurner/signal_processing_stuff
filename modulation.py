@@ -4,6 +4,9 @@ import wave
 import tkinter as tk
 from tkinter import messagebox
 from scipy.interpolate import interp1d
+from itertools import combinations_with_replacement, product
+
+
 
 class SignalProcessor():
     def __init__(self,bits,bit_rate,carrier_frequency,sampling_rate) -> None:
@@ -31,6 +34,26 @@ class SignalProcessor():
                 # Установка значения сигнала равным половине амплитуды для бита "0"
                 signal[time_start:time_end] = \
                     0.5 * self.amplitude * np.sin(2 * np.pi * self.carrier_frequency * self.time[time_start:time_end])
+        return signal
+    
+    def generate_am_signal_pam(self,mod_depth=0.3,bit_count=1):
+        signal = np.zeros(len(self.time))
+
+        mod_depth = 1 - mod_depth
+        mod_levels = 2 ** bit_count
+        levels = np.linspace(mod_depth,1,num=mod_levels)
+
+        # Работает только для pam-2
+        binary_sequence = list(combinations_with_replacement([0,1],bit_count))
+        encoding_table = {binary_sequence[i]: round(levels[i],3) for i in range(0,len(levels))}
+
+        for i in range(0,len(self.bits),bit_count):
+            time_start = i * int(self.time_per_bit * self.sampling_rate)
+            time_end = (i + 1) * int(self.time_per_bit * self.sampling_rate)
+            bit_slice = self.bits[i:i+bit_count]
+            m = encoding_table[tuple(bit_slice)]
+            signal[time_start:time_end] = \
+                m * self.amplitude * np.sin(2 * np.pi * self.carrier_frequency * self.time[time_start:time_end])
         return signal
     
     def generate_psk_signal(self,phase0,phase1):
@@ -96,27 +119,6 @@ class SignalProcessor():
 
         fig.legend()
 
-        # plt.figure(figsize=(10, 6))
-
-        # plt.subplot(2, 1, 1)
-
-        # plt.plot(time, signal, 'b.', label='Дискретные отсчеты')
-        # plt.title('Сигнал')
-        # plt.xlabel('Время (мс)')
-        # plt.ylabel('Амплитуда')
-        # plt.grid(True)
-        # plt.legend()
-
-        # plt.subplot(2, 1, 2)
-
-        # plt.plot(time_interp, interpolated_signal, 'r-', label='Интерполированный сигнал')
-        # plt.title('Интерполированный сигнал')
-        # plt.xlabel('Время (мс)')
-        # plt.ylabel('Амплитуда')
-        # plt.grid(True)
-        # plt.legend()
-
-        # plt.tight_layout()
         plt.show()
 
 
@@ -134,7 +136,7 @@ def generate_and_save():
         bits = [int(bit) for bit in bits_str]
 
         processor = SignalProcessor(bits,500,2000,8000)
-        signal = processor.generate_am_signal()
+        signal = processor.generate_am_signal_pam(mod_depth=0.75,bit_count=2)
 
         signal_fm = processor.generate_fm_signal(800,1600)
         signal_psk = processor.generate_psk_signal(0,1)
@@ -155,8 +157,8 @@ def generate_and_save():
 
         #messagebox.showinfo("Успех", "Файл успешно сохранен как output.wav")
         processor.plot_waveform(signal, time, interpolated_am_signal,time_interp)
-        processor.plot_waveform(signal_fm, time, interpolated_fm_signal,time_interp)
-        processor.plot_waveform(signal_psk, time, interpolated_psk_signal,time_interp)
+ #s       processor.plot_waveform(signal_fm, time, interpolated_fm_signal,time_interp)
+#        processor.plot_waveform(signal_psk, time, interpolated_psk_signal,time_interp)
 
     except ValueError as e:
         messagebox.showerror("Ошибка", str(e))
