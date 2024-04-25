@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import wave
 import tkinter as tk
+from tkinter import ttk
 from tkinter import messagebox
 from scipy.interpolate import interp1d
 from itertools import combinations_with_replacement, product
@@ -15,7 +16,7 @@ class SignalProcessor():
         self.bit_rate = bit_rate
         self.sampling_rate = sampling_rate
         self.time_per_bit = 1 / bit_rate
-        self.time = np.linspace(0, len(self.bits) * self.time_per_bit, int(len(self.bits) * self.time_per_bit * sampling_rate), endpoint=False)
+        self.time = np.linspace(0, len(self.bits) * self.time_per_bit, int(len(self.bits) * self.time_per_bit * self.sampling_rate), endpoint=False)
         self.amplitude = 100
         
 
@@ -36,24 +37,23 @@ class SignalProcessor():
                     0.5 * self.amplitude * np.sin(2 * np.pi * self.carrier_frequency * self.time[time_start:time_end])
         return signal
     
-    def generate_am_signal_pam(self,mod_depth=0.3,bit_count=1):
-        signal = np.zeros(len(self.time))
-
+    def generate_am_signal_pam(self,mod_depth,bit_count,time,time_per_bit):
+       
+        signal = np.zeros(len(time))
         mod_depth = 1 - mod_depth
         mod_levels = 2 ** bit_count
         levels = np.linspace(mod_depth,1,num=mod_levels)
 
-        # Работает только для pam-2
-        binary_sequence = list(combinations_with_replacement([0,1],bit_count))
+        binary_sequence = list(product([0,1],repeat=bit_count))
         encoding_table = {binary_sequence[i]: round(levels[i],3) for i in range(0,len(levels))}
 
         for i in range(0,len(self.bits),bit_count):
-            time_start = i * int(self.time_per_bit * self.sampling_rate)
-            time_end = (i + 1) * int(self.time_per_bit * self.sampling_rate)
+            time_start = i * int(time_per_bit * self.sampling_rate)
+            time_end = (i + 1) * int(time_per_bit * self.sampling_rate)
             bit_slice = self.bits[i:i+bit_count]
             m = encoding_table[tuple(bit_slice)]
             signal[time_start:time_end] = \
-                m * self.amplitude * np.sin(2 * np.pi * self.carrier_frequency * self.time[time_start:time_end])
+                m * self.amplitude * np.sin(2 * np.pi * self.carrier_frequency * time[time_start:time_end])
         return signal
     
     def generate_psk_signal(self,phase0,phase1):
@@ -136,32 +136,37 @@ def generate_and_save():
         bits = [int(bit) for bit in bits_str]
 
         processor = SignalProcessor(bits,500,2000,8000)
-        signal = processor.generate_am_signal_pam(mod_depth=0.75,bit_count=2)
+        bit_count = int(dropdown.get())
+        time_per_bit_pam = 1 / 500 * bit_count
+        time_pam = np.linspace(0, len(processor.bits) * time_per_bit_pam, int(len(processor.bits) * time_per_bit_pam * processor.sampling_rate), endpoint=False)
+        signal = processor.generate_am_signal_pam(mod_depth=0.75,bit_count=bit_count,time=time_pam,time_per_bit=time_per_bit_pam)
 
-        signal_fm = processor.generate_fm_signal(800,1600)
-        signal_psk = processor.generate_psk_signal(0,1)
+        time_interp_pam = np.linspace(0, time_pam[-1], 10 * len(time_pam)) 
+        interp_pam = interp1d(time_pam,signal,"cubic",bounds_error=False)(time_interp_pam)
+        # signal_fm = processor.generate_fm_signal(800,1600)
+        # signal_psk = processor.generate_psk_signal(0,1)
 
-        time = np.arange(0, len(signal)) * 1000 / processor.sampling_rate
-        time_interp = np.linspace(0, time[-1], 10 * len(time))  # Временная ось для интерполированного сигнала
-        # Интерполяция сигнала
-        interpolator_am = interp1d(time,signal,'cubic',bounds_error=False)
-        interpolated_am_signal = interpolator_am(time_interp)
+        # time = np.arange(0, len(signal)) * 1000 / processor.sampling_rate
+        # time_interp = np.linspace(0, time[-1], 10 * len(time))  # Временная ось для интерполированного сигнала
+        # # Интерполяция сигнала
+        # interpolator_am = interp1d(time,signal,'cubic',bounds_error=False)
+        # interpolated_am_signal = interpolator_am(time_interp)
 
-        interpolator_fm = interp1d(time,signal_fm,'cubic',bounds_error=False)
-        interpolated_fm_signal = interpolator_fm(time_interp)
+        # interpolator_fm = interp1d(time,signal_fm,'cubic',bounds_error=False)
+        # interpolated_fm_signal = interpolator_fm(time_interp)
 
-        interpolator_psk = interp1d(time,signal_psk,'cubic',bounds_error=False)
-        interpolated_psk_signal = interpolator_psk(time_interp)
+        # interpolator_psk = interp1d(time,signal_psk,'cubic',bounds_error=False)
+        # interpolated_psk_signal = interpolator_psk(time_interp)
 
         #save_wav('output.wav', signal, sampling_rate)
 
         #messagebox.showinfo("Успех", "Файл успешно сохранен как output.wav")
-        processor.plot_waveform(signal, time, interpolated_am_signal,time_interp)
+        processor.plot_waveform(signal, time_pam, interp_pam,time_interp_pam)
  #s       processor.plot_waveform(signal_fm, time, interpolated_fm_signal,time_interp)
 #        processor.plot_waveform(signal_psk, time, interpolated_psk_signal,time_interp)
 
-    except ValueError as e:
-        messagebox.showerror("Ошибка", str(e))
+    except Exception as e:
+        print(e)
 
 
 # Создание графического интерфейса
@@ -174,7 +179,10 @@ label.pack()
 entry = tk.Entry(app)
 entry.insert(0,"000110001100")
 entry.pack()
-
+options = ["1","2","3","4"]
+dropdown = ttk.Combobox(values=options)
+dropdown.set("1")
+dropdown.pack()
 button = tk.Button(app, text="Сгенерировать и сохранить", command=generate_and_save)
 button.pack()
 
