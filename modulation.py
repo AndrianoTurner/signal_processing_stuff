@@ -137,20 +137,22 @@ def generate_and_save():
 
         processor = SignalProcessor(bits,500,2000,8000)
         bit_count = int(dropdown.get())
-        time_per_bit_pam = 1 / 500 * bit_count
+        total_parts = len(bits) // bit_count
+        time_per_bit_pam = 1 / 500 * total_parts
         time_pam = np.linspace(0, len(processor.bits) * time_per_bit_pam, int(len(processor.bits) * time_per_bit_pam * processor.sampling_rate), endpoint=False)
         signal = processor.generate_am_signal_pam(mod_depth=0.75,bit_count=bit_count,time=time_pam,time_per_bit=time_per_bit_pam)
-
+        time_pam = np.arange(0,len(signal)) * 1000 / processor.sampling_rate
         time_interp_pam = np.linspace(0, time_pam[-1], 10 * len(time_pam)) 
         interp_pam = interp1d(time_pam,signal,"cubic",bounds_error=False)(time_interp_pam)
+        signal_am = processor.generate_am_signal()
         # signal_fm = processor.generate_fm_signal(800,1600)
         # signal_psk = processor.generate_psk_signal(0,1)
 
-        # time = np.arange(0, len(signal)) * 1000 / processor.sampling_rate
-        # time_interp = np.linspace(0, time[-1], 10 * len(time))  # Временная ось для интерполированного сигнала
+        time = np.arange(0, len(signal_am)) * 1000 / processor.sampling_rate
+        time_interp = np.linspace(0, time[-1], 10 * len(time))  # Временная ось для интерполированного сигнала
         # # Интерполяция сигнала
-        # interpolator_am = interp1d(time,signal,'cubic',bounds_error=False)
-        # interpolated_am_signal = interpolator_am(time_interp)
+        interpolator_am = interp1d(time,signal_am,'cubic',bounds_error=False)
+        interpolated_am_signal = interpolator_am(time_interp)
 
         # interpolator_fm = interp1d(time,signal_fm,'cubic',bounds_error=False)
         # interpolated_fm_signal = interpolator_fm(time_interp)
@@ -163,6 +165,7 @@ def generate_and_save():
         #messagebox.showinfo("Успех", "Файл успешно сохранен как output.wav")
         processor.plot_waveform(signal, time_pam, interp_pam,time_interp_pam)
  #s       processor.plot_waveform(signal_fm, time, interpolated_fm_signal,time_interp)
+        processor.plot_waveform(signal_am, time, interpolated_am_signal,time_interp)
 #        processor.plot_waveform(signal_psk, time, interpolated_psk_signal,time_interp)
 
     except Exception as e:
@@ -179,7 +182,7 @@ label.pack()
 entry = tk.Entry(app)
 entry.insert(0,"000110001100")
 entry.pack()
-options = ["1","2","3","4"]
+options = ["1","2","4"]
 dropdown = ttk.Combobox(values=options)
 dropdown.set("1")
 dropdown.pack()
